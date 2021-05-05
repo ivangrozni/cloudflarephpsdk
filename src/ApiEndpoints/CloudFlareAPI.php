@@ -52,8 +52,8 @@ abstract class CloudFlareAPI {
   // length is greater than 37. If the key is invalid but the expected length
   // the Api will return a more informative http code of 403.
   const GLOBAL_API_KEY_LENGTH = 37;
-  // The length of the Api key.
-  const API_KEY_LENGTH = 40;
+  // The length of an Api token.
+  const API_TOKEN_LENGTH = 40;
 
   // The CloudFlare API sets a maximum of 1,200 requests in a 5-minute period.
   const API_RATE_LIMIT = 1200;
@@ -97,7 +97,7 @@ abstract class CloudFlareAPI {
     $headers = [
       'Content-Type' => 'application/json',
     ];
-    if (strlen($apikey) === self::API_KEY_LENGTH) {
+    if (strlen($apikey) === self::API_TOKEN_LENGTH) {
       $headers['Authorization'] = 'Bearer ' . $apikey;
     }
     else {
@@ -149,20 +149,20 @@ abstract class CloudFlareAPI {
     // This check seems superfluous.  However, the Api only returns a http 400
     // code. This proactive check gives us more information.
     $api_key_length = strlen($this->apikey);
-    $is_api_key_valid = $api_key_length == self::API_KEY_LENGTH || $api_key_length == self::GLOBAL_API_KEY_LENGTH;
-    $is_api_key_alpha_numeric = ctype_alnum($this->apikey);
-    $is_api_key_lower_case = !(preg_match('/[A-Z]/', $this->apikey));
+    $is_valid_length = $api_key_length == self::API_TOKEN_LENGTH || $api_key_length == self::GLOBAL_API_KEY_LENGTH;
+    $is_valid_token_chars = !preg_match('/[^A-Za-z0-9_-]/', $this->apikey);
+    $is_valid_key_chars = !preg_match('/[^a-z0-9]/', $this->apikey);
 
-    if (!$is_api_key_valid) {
-      throw new CloudFlareInvalidCredentialException("Invalid Api Key: Key should be 37 chars long.", 403);
+    if (!$is_valid_length) {
+      throw new CloudFlareInvalidCredentialException("Invalid Api Key: Should be 37 character global key, or 40 character token.", 403);
     }
 
-    if (!$is_api_key_alpha_numeric) {
-      throw new CloudFlareInvalidCredentialException('Invalid Api Key: Key can only contain alphanumeric characters.', 403);
+    if ($api_key_length == self::API_TOKEN_LENGTH && !$is_valid_token_chars) {
+      throw new CloudFlareInvalidCredentialException('Invalid Api Key: 40-character token can only contain alphanumeric characters, hyphens, and underscores.', 403);
     }
 
-    if ($api_key_length == self::GLOBAL_API_KEY_LENGTH && !$is_api_key_lower_case) {
-      throw new CloudFlareInvalidCredentialException('Invalid Api Key: Key can only contain lowercase or numerical characters.', 403);
+    if ($api_key_length == self::GLOBAL_API_KEY_LENGTH && !$is_valid_key_chars) {
+      throw new CloudFlareInvalidCredentialException('Invalid Api Key: 37-character global key can only contain lowercase and numeric characters.', 403);
     }
 
     try {
